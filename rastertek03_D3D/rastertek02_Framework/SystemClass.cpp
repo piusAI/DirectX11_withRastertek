@@ -1,4 +1,5 @@
 ﻿#include "SystemClass.h"
+#include <cstdio>
 
 
 bool SystemClass::Initialize()
@@ -136,6 +137,7 @@ LRESULT SystemClass::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM 
 void SystemClass::InitializeWindows(int& screenWidth, int& screenHeight)
 {
 	WNDCLASSEX wc;
+	ZeroMemory(&wc, sizeof(WNDCLASSEX)); //여기 0으로 꼭 밀기!!
 	DEVMODE dmScreenSettings;
 	int posX, posY;
 
@@ -193,6 +195,14 @@ void SystemClass::InitializeWindows(int& screenWidth, int& screenHeight)
 	m_hwnd = CreateWindowEx(WS_EX_APPWINDOW, m_applicationName, m_applicationName,
 		WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_POPUP,
 		posX, posY, screenWidth, screenHeight, NULL, NULL, m_hinstance, NULL);
+
+	if (m_hwnd == NULL) {
+		DWORD error = GetLastError();
+		char err_msg[128];
+		sprintf_s(err_msg, "윈도우 생성 실패! 에러 코드: %lu\n", error);
+		OutputDebugStringA(err_msg);
+		return;
+	}
 
 	ShowWindow(m_hwnd, SW_SHOW);
 	SetForegroundWindow(m_hwnd);

@@ -24,7 +24,7 @@ void InputClass::KeyUp(unsigned int input)
 
 void InputClass::KeyDown(unsigned int input)
 {
-	// release처럼 떼면 해당상태 지우기
+	// release처럼 떼면 해당 상태 지우기
 	m_keys[input] = false;
 	return;
 }

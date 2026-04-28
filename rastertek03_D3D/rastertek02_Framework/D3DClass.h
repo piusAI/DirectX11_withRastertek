@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 //LINKING
 #pragma comment(lib, "d3d11.lib")
@@ -19,14 +19,16 @@ public:
 	D3DClass() : m_swapChain(0), m_device(0), m_deviceContext(0), m_renderTargetView(0), m_depthStencilBuffer(0), m_depthStencilState(0), m_depthStencilView(0), m_rasterState(0){};
 	D3DClass(const D3DClass& other){}
 	~D3DClass() {}
+	
+	// Shutdown, Init이 집중해야할 곳!!
 	bool Initialize(int, int, bool, HWND, bool, float, float);
 	void Shutdown();
 	void BeginScene(float, float, float, float);
 
 	void EndScene();
 
-	ID3D11Device* GetDevice();
-	ID3D11DeviceContext* GetDeviceContext();
+	ID3D11Device* GetDevice() { return m_device; }
+	ID3D11DeviceContext* GetDeviceContext() { return m_deviceContext; }
 
 	void GetProjectionMatrix(XMMATRIX&);
 	void GetWorldMatrix(XMMATRIX&);
@@ -52,7 +54,7 @@ private:
 
 	XMMATRIX m_projectionMatrix;
 	XMMATRIX m_worldMatrix;
-	XMMATRIX m_othoMatrix;
+	XMMATRIX m_orthoMatrix;
 	D3D11_VIEWPORT m_viewport;
 };
 

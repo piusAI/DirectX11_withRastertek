@@ -1,4 +1,5 @@
 ﻿#include "ApplicationClass.h"
+#include <cstdio>
 
 
 bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
@@ -6,11 +7,15 @@ bool ApplicationClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	bool result;
 
 	m_Direct3D = new D3DClass;
+	char msg[128];
+	sprintf_s(msg, "Width: %d Height: %d\n", screenWidth, screenHeight);
+	OutputDebugStringA(msg);
 
 	result = m_Direct3D->Initialize(screenWidth, screenHeight, VSYNC_ENABLED, hwnd, FULL_SCREEN, SCREEN_DEPTH, SCREEN_NEAR);
 	if (!result)
 	{
 		MessageBox(hwnd, L" D3D 초기화 불가!", L"에러", MB_OK);
+		return false;
 	}
 	return true;
 	

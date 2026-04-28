@@ -1,59 +1,410 @@
-#include "D3DClass.h"
+ï»¿#include "D3DClass.h"
+#include <cstdio>
 
-D3DClass::D3DClass()
-{
-}
+
 
 bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync, HWND hwnd, bool fullscreen, float screenDepth, float screenNear)
 {
-	HRESULT result;
-	IDXGIFactory* factory;
-	IDXGIAdapter* adapter;
-	IDXGIOutput* adapterOutput;
-	unsigned int numModes, i, numerator, denominator;
-	unsigned long long stringLength;
-	DXGI_MODE_DESC* displayModeList;
-	DXGI_ADAPTER_DESC adapterDesc;
+    HRESULT result;
+    IDXGIFactory* factory;
+    IDXGIAdapter* adapter;
+    IDXGIOutput* adapterOutput;
+    unsigned int numModes, i, numerator, denominator;
+    unsigned long long stringLength;
+    DXGI_MODE_DESC* displayModeList;
+    DXGI_ADAPTER_DESC adapterDesc;
 
-	int error;
-	DXGI_SWAP_CHAIN_DESC swapChainDesc;
-	D3D_FEATURE_LEVEL featureLevel;
-	ID3D11Texture2D* backBufferPtr;
-	D3D11_TEXTURE2D_DESC depthBufferDesc;
-	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
-	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
+    
+    int error;
+    DXGI_SWAP_CHAIN_DESC swapChainDesc;
 
-	D3D11_RASTERIZER_DESC rasterDesc;
-	float fieldOfView, screenAspect;
+    D3D_FEATURE_LEVEL featureLevels[] = {
+        D3D_FEATURE_LEVEL_11_0,
+        D3D_FEATURE_LEVEL_10_1,
+        D3D_FEATURE_LEVEL_10_0,
+    };
 
-	//vsync ÀÌ º¯¼ö·Î D3D°¡ À¯Àú ¸ð´ÏÅÍ »õ·Î°íÄ§·ü¿¡ ¸ÂÃç render ¶Ç´Â ÃÖ´ëÇÑ ºü¸£°Ô ·»´õÇÒÁö °áÁ¤
-	m_vsync_enabled = vsync;
+    D3D_FEATURE_LEVEL featureLevel;
+    ID3D11Texture2D* backBufferPtr;
+    D3D11_TEXTURE2D_DESC depthBufferDesc;
+    D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
+    D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
 
-	return false;
+    D3D11_RASTERIZER_DESC rasterDesc;
+    float fieldOfView, screenAspect;
 
-	// ÄÄÇ»ÅÍ¸¶´Ù ´Ù¸¥ »õ·Î°íÄ§·ü Á¤º¸ Äõ¸® ¹× °è»ê
-	// DX´Â buffer flip´ë½Å blitÀ» ¼öÇàÇØ¼­ ¼º´É ÀúÇÏ
-	// DXGI : DX¿¡¼­ ±×·¡ÇÈÄ«µå, ¾î´ðÅÍ, Ãâ·ÂÀåÄ¡ °ü¸®ÇÏ´Â ·¹ÀÌ¾î
-	// Factory : °´Ã¼ ¸¸µé¾îÁÖ´Â °ü¸®ÀÚ
-	result = CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&factory);
-	// DXGI °ü¸®ÇÏ´Â factory ¸¸µé¾î¼­ factory Æ÷ÀÎÅÍ¿¡ ³ÖÀ½
-	if (FAILED(result))
-	{
-		return false;
-	}
+    // vsync ê°’ì— ë”°ë¼ì„œ D3Dê°€ í™”ë©´ì— ê·¸ë¦´ ë•Œ í™”ë©´ ì£¼ì‚¬ìœ¨ì— ë§žì¶° render í• ì§€ ì—¬ë¶€ë¥¼ ì„¤ì •í•œë‹¤.
+    m_vsync_enabled = vsync;
+    
 
-	result = factory->EnumAdapters(0, &adapter);
-	if (FAILED(result)) return false;
-	// ¿©±â±îÁö
-	// Before we can initialize Direct3D we have to get the refresh rate from the video card/monitor. Each computer may be slightly different so we will need to query for that information. We query for the numerator and denominator values and then pass them to DirectX during the setup and it will calculate the proper refresh rate. If we don't do this and just set the refresh rate to a default value which may not exist on all computers then DirectX will respond by performing a blit instead of a buffer flip which will degrade performance and give us annoying errors in the debug output.
+    // ì»´í“¨í„°ë§ˆë‹¤ ë‹¤ë¥¸ ì£¼ì‚¬ìœ¨ì„ ê°€ì§€ê³  ìžˆê¸° ë•Œë¬¸ì— ì´ë¥¼ ì–»ì–´ì™€ì•¼ í•œë‹¤.
+    // DXëŠ” buffer flipê³¼ blit ë°©ì‹ì„ ì‚¬ìš©í•˜ëŠ”ë° ì„±ëŠ¥ ì°¨ì´ê°€ ìžˆë‹¤.
+    // DXGI : DXì—ì„œ ê·¸ëž˜í”½ì¹´ë“œ, ëª¨ë‹ˆí„°, ì¶œë ¥ìž¥ì¹˜ ë“±ì„ ê´€ë¦¬í•˜ëŠ” ì¸í„°íŽ˜ì´ìŠ¤
+    // Factory : ê°ì²´ë¥¼ ìƒì„±í•´ì£¼ëŠ” ì—­í• ì„ í•œë‹¤.
+
+    result = CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&factory);
+    // DXGIë¥¼ ìƒì„±í•˜ëŠ” factoryë¥¼ ë§Œë“¤ì–´ì„œ factory í¬ì¸í„°ì— ì €ìž¥
+    if (FAILED(result))
+    {
+        return false;
+    }
+
+    //ì–´ëŒ‘í„°, display, DXGIëª¨ë“œ ë“±ë“± ë§žì¶¤
+    result = factory->EnumAdapters(0, &adapter);
+    if (FAILED(result)) return false;
+
+    result = adapter->EnumOutputs(0, &adapterOutput);
+    if (FAILED(result)) return false;
+
+    result = adapterOutput->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_ENUM_MODES_INTERLACED, &numModes, NULL);
+    if (FAILED(result)) return false;
+    
+    displayModeList = new DXGI_MODE_DESC[numModes];
+    if (!displayModeList) return false;
+    
+    result = adapterOutput->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_ENUM_MODES_INTERLACED, &numModes, displayModeList);
+    if (FAILED(result)) return false;
+
+    for (int i = 0; i < numModes; i++)
+    {
+        // displayModeList
+        if (displayModeList[i].Width == static_cast<unsigned int>(screenWidth))
+        {
+            if (displayModeList[i].Height == static_cast<unsigned int>(screenHeight))
+            {
+                numerator = displayModeList[i].RefreshRate.Numerator;
+                denominator = displayModeList[i].RefreshRate.Denominator;
+            }
+        }
+    }
+
+    // desc, ë¹„ë””ì˜¤ ì¹´ë“œ ì´ë¦„, ë©”ëª¨ë¦¬ ìš©ëŸ‰ ê°€ì ¸ì˜¤ê¸°
+    result = adapter->GetDesc(&adapterDesc);
+    if (FAILED(result))
+    {
+        return false;
+    }
+
+    m_videoCardMemory = (int)(adapterDesc.DedicatedVideoMemory / 1024 / 1024);
+
+    error = wcstombs_s(&stringLength, m_videoCardDescription, 128, adapterDesc.Description, 128);
+    if (error != 0)
+    {
+        return false;
+    }
+
+    delete[] displayModeList;
+    displayModeList = 0;
+
+    adapterOutput->Release();
+    adapterOutput = 0;
+
+    adapter->Release();
+    adapter = 0;
+
+
+    factory->Release();
+    factory = 0;
+
+    // ì‹œìŠ¤í…œì—ì„œ ìƒˆë¡œê³ ì¹¨ ë¹ˆë„ ì–»ì–´ì„œ dx ì´ˆê¸°í™”!
+    
+    // ë“œë””ì–´ swap chain!!!
+
+    ZeroMemory(&swapChainDesc, sizeof(swapChainDesc));
+
+    swapChainDesc.BufferCount = 1;
+
+    swapChainDesc.BufferDesc.Width = screenWidth;
+    swapChainDesc.BufferDesc.Height = screenHeight;
+
+    swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    if (m_vsync_enabled)
+    {
+        swapChainDesc.BufferDesc.RefreshRate.Numerator = numerator;
+        swapChainDesc.BufferDesc.RefreshRate.Denominator = denominator;
+    }
+    else
+    {
+        swapChainDesc.BufferDesc.RefreshRate.Numerator = 0;
+        swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
+    }
+
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+
+    swapChainDesc.OutputWindow = hwnd;
+
+    swapChainDesc.SampleDesc.Count = 1;
+    swapChainDesc.SampleDesc.Quality = 0;
+
+    swapChainDesc.Windowed = true;
+    /*if (fullscreen)
+    {
+        swapChainDesc.Windowed = false;
+    }
+    else
+    {
+     
+    }*/
+
+    swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+    swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+
+    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+
+    swapChainDesc.Flags = 0;
+
+    //Dx Level ì„¤ì •!
+    featureLevel = D3D_FEATURE_LEVEL_11_0;
+
+    //ì´ì œ ë“œëŽŒ D3D device, context ìƒì„±í•  ìˆ˜ìžˆìŒ!!
+
+    //Dx11 video ì¹´ë“œ ì„¤ì¹˜ ë˜ì–´ìžˆì§€ ì•ŠëŠ” ì‚¬ëžŒë“¤ì—ê² ìœ ìš©í•œ ì„¤ì •
+
+    result = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, &featureLevel, 1,
+        D3D11_SDK_VERSION, &swapChainDesc, &m_swapChain, &m_device, NULL, &m_deviceContext);
+    if (FAILED(result))
+    {
+        return false;
+    }
+
+    if(!m_deviceContext)
+    {
+        OutputDebugStringA("DeviceContext is NULL \n");
+        return false;
+    }
+    if (!hwnd)
+    {
+        OutputDebugStringA("HWND is NULL\n");
+    }
+
+
+    result = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferPtr);
+    if (FAILED(result))
+    {
+        return false;
+    }
+
+    result = m_device->CreateRenderTargetView(backBufferPtr, NULL, &m_renderTargetView);
+    if (FAILED(result))   return false;
+
+    backBufferPtr->Release();
+    backBufferPtr = 0;
+
+    ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
+
+    depthBufferDesc.Width = screenWidth;
+    depthBufferDesc.Height = screenHeight;
+    depthBufferDesc.MipLevels = 1;
+    depthBufferDesc.ArraySize = 1;
+    depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthBufferDesc.SampleDesc.Count = 1;
+    depthBufferDesc.SampleDesc.Quality = 0;
+    depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+    depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    depthBufferDesc.CPUAccessFlags = 0;
+    depthBufferDesc.MiscFlags = 0;
+    
+    result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &m_depthStencilBuffer);
+    if(FAILED(result))
+    {
+        return false;
+    }
+
+    ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
+
+    depthStencilDesc.DepthEnable = true;
+    depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+
+    depthStencilDesc.StencilEnable = true;
+    depthStencilDesc.StencilReadMask = 0xFF;
+    depthStencilDesc.StencilWriteMask = 0xFF;
+
+    depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+    depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+    depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+    depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+    depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+    depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+    depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+    depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+    result = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilState);
+    if (FAILED(result)) return false;
+
+
+    m_deviceContext->OMSetDepthStencilState(m_depthStencilState, 1);
+
+    ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
+
+    depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    depthStencilViewDesc.Texture2D.MipSlice = 0;
+
+
+    result = m_device->CreateDepthStencilView(m_depthStencilBuffer, &depthStencilViewDesc, &m_depthStencilView);
+    if (FAILED(result))
+    {
+        return false;
+    }
+    m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
+
+
+    //rasterizer ìƒì„±
+    rasterDesc.AntialiasedLineEnable = false;
+    rasterDesc.CullMode = D3D11_CULL_BACK;
+    rasterDesc.DepthBias = 0;
+    rasterDesc.DepthBiasClamp = 0.0f;
+    rasterDesc.DepthClipEnable = true;
+    rasterDesc.FillMode = D3D11_FILL_SOLID;
+    rasterDesc.FrontCounterClockwise = false;
+    rasterDesc.MultisampleEnable = false;
+    rasterDesc.ScissorEnable = false;
+    rasterDesc.SlopeScaledDepthBias = 0.0f;
+
+    result = m_device->CreateRasterizerState(&rasterDesc, &m_rasterState);
+
+    if (FAILED(result))
+    {
+        return false;
+    }
+    m_deviceContext->RSSetState(m_rasterState);
+
+    m_viewport.Width = (float)screenWidth;
+    m_viewport.Height = (float)screenHeight;
+
+    m_viewport.MinDepth = 0.0f;
+    m_viewport.MaxDepth = 1.0f;
+    m_viewport.TopLeftX = 0.0f;
+    m_viewport.TopLeftY = 0.0f;
+
+    m_deviceContext->RSSetViewports(1, &m_viewport);
+
+
+    fieldOfView = 3.141592654f / 4.0f;
+    screenAspect = (float)screenWidth / (float)screenHeight;
+
+    m_projectionMatrix = XMMatrixPerspectiveFovLH(fieldOfView, screenAspect, screenNear, screenDepth);
+
+    m_worldMatrix = XMMatrixIdentity();
+
+    // Projection matrix
+    // 3D->2D ë Œë”
+    m_orthoMatrix = XMMatrixOrthographicLH((float)screenWidth, (float)screenHeight, screenNear, screenDepth);
+    
+    return true;
 }
 
-void D3DClass::BeginScene(float, float, float, float)
+void D3DClass ::Shutdown() {
+    if (m_swapChain)
+    {
+        m_swapChain->SetFullscreenState(false, NULL);
+    }
+
+    if (m_rasterState)
+    {
+        m_rasterState->Release();
+        m_rasterState = 0;
+    }
+    if (m_depthStencilView)
+    {
+        m_depthStencilView->Release();
+        m_depthStencilView = 0;
+    }
+    if (m_depthStencilState)
+    {
+        m_depthStencilState->Release();
+        m_depthStencilState = 0;
+    }
+
+    if (m_renderTargetView)
+    {
+        m_renderTargetView->Release();
+        m_renderTargetView = 0;
+    }
+    if (m_deviceContext)
+    {
+        m_deviceContext->Release();
+        m_deviceContext = 0;
+    }
+    if (m_device)
+    {
+        m_device->Release();
+        m_device = 0;
+    }
+    if (m_swapChain)
+    {
+        m_swapChain->Release();
+        m_swapChain = 0;
+    }
+    return;
+
+}
+
+void D3DClass::BeginScene(float red, float green, float blue, float alpha)
 {
-	
+    float color[4];
+
+    color[0] = red;
+    color[1] = green;
+    color[2] = blue;
+    color[3] = alpha;
+
+    m_deviceContext->ClearRenderTargetView(m_renderTargetView, color);
+
+    m_deviceContext->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+    return;
 }
 
 void D3DClass::EndScene()
 {
-
+    if (m_vsync_enabled)
+    {
+        // ìƒˆë¡œê³ ì¹¨ ë¹ˆë„ ê³ ì •
+        m_swapChain->Present(1, 0);
+    }
+    else
+    {
+        // ASAP í‘œì‹œ
+        m_swapChain->Present(0, 0);
+    }
+    return;
 }
+
+void D3DClass::GetProjectionMatrix(XMMATRIX& projectionMatrix)
+{
+    projectionMatrix = m_projectionMatrix;
+}
+
+void D3DClass::GetWorldMatrix(XMMATRIX& worldMatrix)
+{
+    worldMatrix = m_worldMatrix;
+}
+
+void D3DClass::GetOrthoMatrix(XMMATRIX& orthoMatrix)
+{
+    orthoMatrix = m_orthoMatrix;
+}
+
+void D3DClass::GetVideoCardInfo(char* cardName, int& memory)
+{
+    strcpy_s(cardName, 128, m_videoCardDescription);
+    memory = m_videoCardMemory;
+}
+
+void D3DClass::SetBackBufferRenderTarget()
+{
+    m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
+}
+
+void D3DClass::ResetViewport()
+{
+    m_deviceContext->RSSetViewports(1, &m_viewport);
+}
+
+
+
+
